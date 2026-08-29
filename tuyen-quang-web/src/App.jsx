@@ -6,6 +6,9 @@ import IntroducePage from "./pages/introducepage";
 import GuidePage from "./pages/guidepage";
 import PrizePage from "./pages/prizepage";
 import NewsPage from "./pages/newspage"
+import ScrollToTop from "./components/ScrollToTop"; // Import component vừa tạo
+import Header from "./components/Header";
+
 
 function ComingSoonPage({ title }) {
   return (
@@ -25,23 +28,20 @@ function ComingSoonPage({ title }) {
 
 function App() {
   return (
+    <>
+    <ScrollToTop />
+
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/gioi-thieu" element={<IntroducePage />} />
-
-        <Route path="/" element={<HomePage />} />
         <Route path="/huong-dan" element={<GuidePage/>} />
-
-        <Route path="/" element={<HomePage />} />
         <Route path="/giai-thuong" element={<PrizePage/>} />
-
         <Route
           path="/bai-du-thi"
           element={<ComingSoonPage title="Danh sách bài thi" />}
         />
 
-        <Route path="/" element={<HomePage />} />
         <Route path="/tin-tuc" element={<NewsPage/>} />
 
         <Route
@@ -50,6 +50,7 @@ function App() {
         />
       </Route>
     </Routes>
+    </>
   );
 }
 
