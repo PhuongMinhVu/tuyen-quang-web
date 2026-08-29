@@ -7,7 +7,6 @@ import GuidePage from "./pages/guidepage";
 import PrizePage from "./pages/prizepage";
 import NewsPage from "./pages/newspage"
 import ScrollToTop from "./components/ScrollToTop"; // Import component vừa tạo
-import Header from "./components/Header";
 
 
 function ComingSoonPage({ title }) {
