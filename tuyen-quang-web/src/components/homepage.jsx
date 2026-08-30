@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import heroBackground from "../assets/hero-background.png"
 import heroMapTuyenQuang from "../assets/hero-map-tuyen-quang.png"
 import logoTuyenQuangDoc from "../assets/logo-tuyen-quang-doc.png"
+import whiteLogoCuocThi from "../assets/whitelogo-cuocthi.png"
 import iconDangKy from "../assets/icon-dang-ky.svg"
 import iconTheLe from "../assets/icon-the-le.svg"
 import mucDichHero from "../assets/muc-dich-hero.png"
@@ -283,7 +284,7 @@ function HomePage() {
 
     {/* Logo dọc bên trái */}
     <img
-      src={logoTuyenQuangDoc}
+      src={whiteLogoCuocThi}
       alt="Logo Tuyên Quang Trong Tôi 2026"
       className="
         absolute
