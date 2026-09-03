@@ -87,13 +87,43 @@ const prizes = [
   },
 ]
 
-// Dữ liệu 5 Vòng thi
+// Dữ liệu 5 giai đoạn tiến trình cuộc thi (Đồng bộ với HomePage)
 const timelineSteps = [
-  { number: "01", title: "Vòng sơ loại", date: "Từ ngày ... đến ngày ..." },
-  { number: "02", title: "Vòng loại", date: "Từ ngày ... đến ngày ..." },
-  { number: "03", title: "Vòng bán kết", date: "Từ ngày ... đến ngày ..." },
-  { number: "04", title: "Vòng chung kết", date: "Từ ngày ... đến ngày ..." },
-  { number: "05", title: "Gala trao giải", date: "Từ ngày ... đến ngày ..." },
+  {
+    number: "01",
+    title: "Phát động cuộc thi",
+    date: "Đầu tháng 09/2026",
+    left: "10.5%",
+    top: "41%",
+  },
+  {
+    number: "02",
+    title: "Tiếp nhận tác phẩm",
+    date: "Đến hết 15/09/2026",
+    left: "30.5%",
+    top: "28%",
+  },
+  {
+    number: "03",
+    title: "Chấm sơ khảo",
+    date: "16/09 - 17/09/2026",
+    left: "50%",
+    top: "17%",
+  },
+  {
+    number: "04",
+    title: "Chấm chung khảo",
+    date: "18/09 - 19/09/2026",
+    left: "70%",
+    top: "4%",
+  },
+  {
+    number: "05",
+    title: "Trao giải & Triển lãm",
+    date: "20/09 - 23/09/2026",
+    left: "89.5%",
+    top: "-8%",
+  },
 ]
 
 // Dữ liệu Ban giám khảo
@@ -263,26 +293,39 @@ function IntroducePage() {
           
           {/* Hạng mục dự thi */}
           <div>
-            <h2 className="font-['Phudu'] text-2xl font-black uppercase sm:text-3xl lg:text-4xl">
+            <h2 className="font-['Phudu'] text-2xl font-black uppercase text-white sm:text-3xl lg:text-4xl">
               HẠNG MỤC DỰ THI
             </h2>
-            <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 lg:gap-5">
-              {categories.map((cat) => (
-                <div
-                  key={cat.title}
-                  className="group relative aspect-[176/192] overflow-hidden rounded-[12px] bg-white shadow-sm"
+
+            {/* Lưới 6 thẻ hạng mục đồng bộ HomePage */}
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-6 lg:gap-3.5">
+              {categories.map((category) => (
+                <button
+                  key={category.title}
+                  type="button"
+                  className="group relative aspect-[4/5] w-full overflow-hidden rounded-[22px] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
                 >
+                  {/* Ảnh nền danh mục */}
                   <img
-                    src={cat.image}
-                    alt={cat.title}
-                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                    src={category.image}
+                    alt={category.title.replace("\n", " ")}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute left-0 top-0 flex h-14 w-full items-center justify-center rounded-lg border-2 border-[#268B45] bg-white px-2">
-                    <span className="whitespace-pre-line text-center font-['Fz_Poppins'] text-xs font-bold uppercase leading-4 text-green-900">
-                      {cat.title}
+
+                  {/* Hộp chữ tràn khít mép trên và 2 bên, bo cong mép đáy */}
+                  <div className="absolute inset-x-0 top-0 flex h-[62px] items-center justify-center overflow-hidden rounded-t-[22px] rounded-b-[18px] border-[3px] border-[#268B45] bg-white px-2 shadow-sm transition-all duration-300 group-hover:border-[#1E6D34]">
+                    {/* Nền gradient xanh phủ lên khi rê chuột */}
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-0 bg-gradient-to-br from-[#85C446] via-[#4DA53E] to-[#1E6D34] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    />
+
+                    {/* Tên hạng mục: Chuyển sang chữ trắng khi hover */}
+                    <span className="relative z-10 whitespace-pre-line text-center font-['Fz_Poppins'] text-xs font-bold uppercase leading-4 text-[#1A6C35] transition-colors duration-300 group-hover:!text-white lg:text-[13px]">
+                      {category.title}
                     </span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -337,29 +380,39 @@ function IntroducePage() {
               CƠ CẤU GIẢI THƯỞNG
             </h2>
 
-            {/* Khung bậc thang Desktop */}
-            <div className="mt-12 hidden items-end justify-between gap-4 lg:flex">
-              {timelineSteps.map((step, idx) => {
-                const stepHeights = ["h-[140px]", "h-[180px]", "h-[220px]", "h-[260px]", "h-[300px]"]
-                return (
-                  <div
-                    key={step.number}
-                    className={`relative flex w-[18%] flex-col items-center justify-start rounded-2xl bg-white/10 p-4 backdrop-blur-md transition hover:bg-white/20 ${stepHeights[idx]}`}
-                  >
-                    <div className="-mt-8 flex h-14 w-14 items-center justify-center rounded-full bg-[#9DD253] shadow-md">
-                      <span className="font-['Phudu'] text-2xl font-black text-white">
-                        {step.number}
-                      </span>
-                    </div>
-                    <h3 className="mt-4 text-center font-['Fz_Poppins'] text-sm font-bold uppercase text-white">
-                      {step.title}
-                    </h3>
-                    <p className="mt-2 text-center font-['Fz_Poppins'] text-[11px] font-normal uppercase text-white/80">
-                      {step.date}
-                    </p>
+            {/* Desktop Timeline dùng asset timeline-cuoc-thi.png */}
+            <div className="relative mt-12 hidden h-[410px] w-full lg:block">
+              <img
+                src={timelineCuocThi}
+                alt=""
+                aria-hidden="true"
+                className="absolute bottom-0 left-0 h-auto w-full object-contain"
+              />
+
+              {timelineSteps.map((step) => (
+                <div
+                  key={step.number}
+                  className="absolute z-10 flex w-[190px] -translate-x-1/2 flex-col items-center text-center"
+                  style={{
+                    left: step.left,
+                    top: step.top,
+                  }}
+                >
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#9DD253]">
+                    <span className="font-['Phudu'] text-4xl font-[800] text-white">
+                      {step.number}
+                    </span>
                   </div>
-                )
-              })}
+
+                  <h3 className="mt-12 text-lg font-bold uppercase leading-6 text-white">
+                    {step.title}
+                  </h3>
+
+                  <p className="mt-4 whitespace-nowrap text-xs font-normal uppercase text-white/90">
+                    {step.date}
+                  </p>
+                </div>
+              ))}
             </div>
 
             {/* Mobile Timeline */}

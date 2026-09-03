@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 
 import MainLayout from "./components/mainlayout";
+import PhotoListPage from "./pages/photolistpage";
 import HomePage from "./components/homepage";
 import IntroducePage from "./pages/introducepage";
 import GuidePage from "./pages/guidepage";
@@ -36,10 +37,8 @@ function App() {
         <Route path="/gioi-thieu" element={<IntroducePage />} />
         <Route path="/huong-dan" element={<GuidePage/>} />
         <Route path="/giai-thuong" element={<PrizePage/>} />
-        <Route
-          path="/bai-du-thi"
-          element={<ComingSoonPage title="Danh sách bài thi" />}
-        />
+        // Thay dòng ComingSoonPage cũ bằng:
+<Route path="/bai-du-thi" element={<PhotoListPage />} />
 
         <Route path="/tin-tuc" element={<NewsPage/>} />
 

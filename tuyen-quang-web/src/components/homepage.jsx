@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
+import { supabase } from "../supabaseClient"
 
 import heroBackground from "../assets/hero-background.png"
 import heroMapTuyenQuang from "../assets/hero-map-tuyen-quang.png"
@@ -11,6 +13,7 @@ import logo3D from "../assets/3d-logo.png"
 
 import addressIcon from "../assets/address-icon.svg"
 import loveIcon from "../assets/love-icon.svg"
+import noLoveIcon from "../assets/nolove-icon.svg"
 import shareIcon from "../assets/share.svg"
 
 import cachThucIcon from "../assets/cachthuc-icon-1.svg"
@@ -42,6 +45,21 @@ import sonSmile from "../assets/son-smile.png"
 import tinTucAnhBia from "../assets/tintuc-anhbia.webp"
 import xemThemIcon from "../assets/xemthem-icon.svg" 
 
+import timeDemNguocBack from "../assets/timedemnguocback.jpg"
+import calendarIcon from "../assets/calendaricon.svg"
+import ShareModal from "./ShareModal"
+
+
+// Tạo hoặc lấy mã thiết bị duy nhất lưu trong trình duyệt của người dùng
+const getOrCreateDeviceId = () => {
+  let deviceId = localStorage.getItem("tq_device_id")
+  if (!deviceId) {
+    deviceId = "dev_" + Math.random().toString(36).substring(2, 15) + Date.now().toString(36)
+    localStorage.setItem("tq_device_id", deviceId)
+  }
+  return deviceId
+}
+
 const categories = [
   {
     title: "Con người\nTuyên Quang",
@@ -68,16 +86,6 @@ const categories = [
     image: categoryStory,
   },
 ]
-
-const featuredPosts = Array.from({ length: 8 }, (_, index) => ({
-  id: index + 1,
-  title: "Bình Minh Na Hang",
-  author: "Lê Hoàng Long",
-  code: String(index + 1).padStart(5, "0"),
-  location: "Chiêm Hóa",
-  votes: 980,
-  image: featuredImage,
-}))
 
 const contestRules = [
   {
@@ -141,36 +149,36 @@ const prizes = [
 const timelineSteps = [
   {
     number: "01",
-    title: "Vòng sơ loại",
-    date: "Từ ngày ... đến ngày ...",
+    title: "Phát động cuộc thi",
+    date: "Đầu tháng 09/2026",
     left: "10.5%",
     top: "41%",
   },
   {
     number: "02",
-    title: "Vòng loại",
-    date: "Từ ngày ... đến ngày ...",
+    title: "Tiếp nhận tác phẩm",
+    date: "Đến hết 15/09/2026",
     left: "30.5%",
     top: "28%",
   },
   {
     number: "03",
-    title: "Vòng bán kết",
-    date: "Từ ngày ... đến ngày ...",
+    title: "Chấm sơ khảo",
+    date: "16/09 - 17/09/2026",
     left: "50%",
     top: "17%",
   },
   {
     number: "04",
-    title: "Vòng chung kết",
-    date: "Từ ngày ... đến ngày ...",
+    title: "Chấm chung khảo",
+    date: "18/09 - 19/09/2026",
     left: "70%",
     top: "4%",
   },
   {
     number: "05",
-    title: "Gala trao giải",
-    date: "Từ ngày ... đến ngày ...",
+    title: "Trao giải & Triển lãm",
+    date: "20/09 - 23/09/2026",
     left: "89.5%",
     top: "-8%",
   },
@@ -222,10 +230,181 @@ const newsItems = [
 
 
 
+// 1. ĐẶT HÀM NÀY Ở BÊN NGOÀI (ngay phía trên dòng "function HomePage()")
+const calculateTimeLeft = () => {
+  const targetDate = new Date("2026-09-15T23:59:59").getTime()
+  const now = new Date().getTime()
+  const difference = targetDate - now
+
+  if (difference <= 0) {
+    return { days: "00", hours: "00", minutes: "00", seconds: "00" }
+  }
+
+  const days = Math.floor(difference / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((difference % (1000 * 60)) / 1000)
+
+  return {
+    days: String(days).padStart(2, "0"),
+    hours: String(hours).padStart(2, "0"),
+    minutes: String(minutes).padStart(2, "0"),
+    seconds: String(seconds).padStart(2, "0"),
+  }
+}
+
+// 2. KHỞI TẠO HOOK BÊN TRONG HÀM HOMEPAGE
 function HomePage() {
+  const [sharingPost, setSharingPost] = useState(null)
+  
+  // State đếm ngược thời gian
+  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft())
+
+  // Bộ đếm 1 giây cập nhật 1 lần
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Các state quản lý bài thi hiện tại
+  const [posts, setPosts] = useState(
+    Array.from({ length: 8 }, (_, index) => ({
+      id: index + 1,
+      title: "Đang cập nhật",
+      author: "Đang cập nhật",
+      code: String(index + 1).padStart(5, "0"),
+      location: "Đang cập nhật",
+      votes: 0,
+      image: featuredImage,
+    }))
+  )
+  const [activeTab, setActiveTab] = useState("latest")
+  const [votedPostIds, setVotedPostIds] = useState(new Set())
+  const [clientIp, setClientIp] = useState("")
+  const [votingId, setVotingId] = useState(null)
+
+  // ... các đoạn code phía dưới giữ nguyên
+
+  // Xử lý danh sách bài thi hiển thị tương ứng với từng tab
+  const displayedPosts = (() => {
+    if (activeTab === "favorite") {
+      // Tab 'Được yêu thích': Chỉ lọc các tác phẩm thiết bị này đã bấm vote
+      return posts.filter((post) => votedPostIds.has(post.id))
+    }
+
+    if (activeTab === "most_voted") {
+      // Tab 'Bình chọn nhiều': Sắp xếp toàn bộ bài thi theo số vote giảm dần
+      return [...posts].sort((a, b) => b.votes - a.votes)
+    }
+
+    // Mặc định 'latest': Sắp xếp bài mới nhất (id lớn nhất) lên đầu
+    return [...posts].sort((a, b) => b.id - a.id)
+  })()
+
+
+
+  // 1. Tự động lấy IP, nạp bài thi từ DB và kiểm tra các bài thiết bị đã vote
+  useEffect(() => {
+    const initData = async () => {
+      const deviceId = getOrCreateDeviceId()
+
+      // Lấy IP máy khách (phục vụ đối soát chống spam)
+      let ip = "0.0.0.0"
+      try {
+        const ipRes = await fetch("https://api.ipify.org?format=json")
+        const ipData = await ipRes.json()
+        ip = ipData.ip
+        setClientIp(ip)
+      } catch (err) {
+        console.error("Không lấy được IP:", err)
+      }
+
+      // Nạp 8 bài thi từ Supabase
+      try {
+        const { data: postsData, error: postsError } = await supabase
+          .from("posts")
+          .select("*")
+          .order("id", { ascending: true })
+
+        if (!postsError && postsData && postsData.length > 0) {
+          setPosts(
+          postsData.map((p) => ({
+            ...p,
+            votes: p.votes_count || 0,
+            image: p.image_url || featuredImage, // Lấy ảnh từ Supabase, nếu trống thì dùng ảnh mặc định
+          }))
+        )
+        }
+      } catch (e) {
+        console.error("Lỗi nạp bài thi từ database:", e)
+      }
+
+      // Kiểm tra lịch sử bình chọn của riêng thiết bị này
+      try {
+        const { data: userVotes, error: votesError } = await supabase
+          .from("votes")
+          .select("post_id")
+          .eq("device_id", deviceId)
+
+        if (!votesError && userVotes) {
+          const votedSet = new Set(userVotes.map((v) => Number(v.post_id)))
+          setVotedPostIds(votedSet)
+        }
+      } catch (e) {
+        console.error("Lỗi nạp lịch sử vote:", e)
+      }
+    }
+
+    initData()
+  }, [])
+
+  // 2. Hàm kích hoạt bình chọn an toàn qua Supabase RPC
+  const handleVote = async (post) => {
+    if (votedPostIds.has(post.id)) {
+      alert("Thiết bị này đã bình chọn cho tác phẩm này rồi!")
+      return
+    }
+
+    setVotingId(post.id)
+    const deviceId = getOrCreateDeviceId()
+
+    try {
+      const { data, error } = await supabase.rpc("vote_post", {
+        p_post_id: post.id,
+        p_ip: clientIp || "0.0.0.0",
+        p_device_id: deviceId,
+      })
+
+      if (error) {
+        alert("Có lỗi xảy ra khi bình chọn: " + error.message)
+        return
+      }
+
+      if (data && data.success) {
+        // Cập nhật trạng thái sang đã vote (đổi tim) và cập nhật số vote mới
+        setVotedPostIds((prev) => new Set([...prev, post.id]))
+        setPosts((prev) =>
+          prev.map((item) =>
+            item.id === post.id ? { ...item, votes: data.votes_count } : item
+          )
+        )
+      } else {
+        alert(data?.message || "Bình chọn không thành công!")
+      }
+    } catch (err) {
+      console.error("Lỗi kết nối bình chọn:", err)
+    } finally {
+      setVotingId(null)
+    }
+  }
   return (
     <>
-      
+
+    
+
+    
 
       {/* Hero banner */}
   <section
@@ -298,39 +477,42 @@ function HomePage() {
       "
     />
 
-    {/* Nhóm nút */}
+    {/* Nhóm nút: Tự co giãn theo tỉ lệ màn hình Mobile -> Tablet -> Desktop */}
     <div
       className="
         absolute
-        bottom-[7%]
+        bottom-[6%]
         left-1/2
         z-20
         flex
         -translate-x-1/2
         items-center
-        gap-25
+        gap-2.5
+        sm:bottom-[7%]
+        sm:gap-6
+        md:gap-14
+        lg:gap-24
       "
     >
-      {/* Nút đăng ký dự thi: Giữ nguyên màu cũ, mở Google Form, hover phóng to nhẹ */}
+      {/* Nút Đăng ký dự thi */}
       <a
         href="https://docs.google.com/forms/d/e/1FAIpQLSdzAR_AHMmZJ5Cb-vMl2iMLdSVdO37TceNPG-y6P79qmU2GTg/viewform?usp=publish-editor"
         target="_blank"
         rel="noopener noreferrer"
         className="
           flex
-          h-10
-          min-w-[165px]
-          cursor-pointer
+          h-6
           items-center
           justify-center
-          gap-3
-          rounded-md
+          gap-1.5
+          whitespace-nowrap
+          rounded
           border
           border-white
           bg-[#247A3E]
-          px-5
+          px-2.5
           font-['Fz_Poppins']
-          text-sm
+          text-[10px]
           font-semibold
           !text-white
           shadow-md
@@ -338,6 +520,17 @@ function HomePage() {
           duration-200
           hover:scale-105
           hover:bg-[#1D6634]
+          sm:h-8
+          sm:min-w-[125px]
+          sm:gap-2
+          sm:rounded-md
+          sm:px-4
+          sm:text-xs
+          md:h-10
+          md:min-w-[165px]
+          md:gap-3
+          md:px-5
+          md:text-sm
         "
       >
         <span className="text-white">Đăng ký dự thi</span>
@@ -346,27 +539,25 @@ function HomePage() {
           src={iconDangKy}
           alt=""
           aria-hidden="true"
-          className="h-6 w-6 shrink-0 object-contain"
+          className="h-3.5 w-3.5 shrink-0 object-contain sm:h-4 sm:w-4 md:h-5 md:w-5"
         />
       </a>
 
-      {/* Nút xem thể lệ: Giữ nguyên màu cũ, chuyển sang trang /huong-dan, hover phóng to nhẹ */}
-      {/* Nút xem thể lệ */}
+      {/* Nút Xem thể lệ */}
       <Link
         to="/huong-dan"
         className="
           flex
-          h-10
-          min-w-[145px]
-          cursor-pointer
+          h-6
           items-center
           justify-center
-          gap-3
-          rounded-md
+          gap-1.5
+          whitespace-nowrap
+          rounded
           bg-white
-          px-5
+          px-2.5
           font-['Fz_Poppins']
-          text-sm
+          text-[10px]
           font-semibold
           !text-[#247A3E]
           shadow-md
@@ -374,6 +565,17 @@ function HomePage() {
           duration-200
           hover:scale-105
           hover:bg-green-50
+          sm:h-8
+          sm:min-w-[110px]
+          sm:gap-2
+          sm:rounded-md
+          sm:px-4
+          sm:text-xs
+          md:h-10
+          md:min-w-[145px]
+          md:gap-3
+          md:px-5
+          md:text-sm
         "
       >
         <span className="text-[#247A3E]">Xem thể lệ</span>
@@ -382,13 +584,98 @@ function HomePage() {
           src={iconTheLe}
           alt=""
           aria-hidden="true"
-          className="h-6 w-6 shrink-0 object-contain"
+          className="h-3.5 w-3.5 shrink-0 object-contain sm:h-4 sm:w-4 md:h-5 md:w-5"
         />
       </Link>
     </div>
+
   </div>
   </div>
   </section>
+
+  {/* Khối Đếm ngược thời gian nhận ảnh */}
+      <section className="relative w-full overflow-hidden bg-[#1F6E33]">
+        {/* Ảnh nền thiên nhiên 100% chiều ngang */}
+        <img
+          src={timeDemNguocBack}
+          alt="Nền đếm ngược cuộc thi Tuyên Quang Trong Tôi"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+
+        {/* Khung nội dung trung tâm căn giữa */}
+        <div className="relative z-10 mx-auto flex w-full max-w-[1440px] flex-col items-center justify-center px-4 py-8 lg:h-[298px] lg:py-0">
+          
+          {/* 1. Thanh tiêu đề thời hạn nhận ảnh: Chiều ngang cố định 595px, chữ to rõ */}
+          <div className="flex h-12 w-full max-w-[595px] items-center justify-center gap-3 rounded-full bg-[#0D4E22] px-6 shadow-md sm:h-14">
+            <img
+              src={calendarIcon}
+              alt=""
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0 object-contain brightness-0 invert sm:h-6 sm:w-6"
+            />
+            <span className="font-['Phudu'] text-sm font-black uppercase tracking-wide text-white sm:text-lg lg:text-[20px]">
+              Thời hạn nhận ảnh đến hết ngày: 15 – 09 – 2026
+            </span>
+          </div>
+
+          {/* 2. Bộ 4 ô đếm ngược: Khống chế max-w-[595px] và justify-between để 2 mép ngoài thẳng tắp với thanh tiêu đề */}
+          <div className="mt-4 flex w-full max-w-[595px] items-center justify-between">
+            {/* Ô Ngày */}
+            <div className="flex h-24 w-[68px] flex-col items-center justify-center rounded-[16px] border-[2.5px] border-white bg-gradient-to-b from-[#F7FEE9] to-[#D5F39B] shadow-sm sm:h-32 sm:w-24 sm:rounded-[20px] lg:h-[142px] lg:w-[118px] lg:rounded-[22px] lg:border-[3px]">
+              <span className="font-['Phudu'] text-3xl font-bold leading-tight text-[#0D4E22] sm:text-4xl lg:text-[48px]">
+                {timeLeft.days}
+              </span>
+              <span className="mt-0.5 font-['Fz_Poppins'] text-xs font-semibold text-[#0D4E22] sm:text-sm lg:text-[14px]">
+                Ngày
+              </span>
+            </div>
+
+            <span className="font-['Phudu'] text-xl font-bold text-white sm:text-2xl lg:text-[28px]">:</span>
+
+            {/* Ô Giờ */}
+            <div className="flex h-24 w-[68px] flex-col items-center justify-center rounded-[16px] border-[2.5px] border-white bg-gradient-to-b from-[#F7FEE9] to-[#D5F39B] shadow-sm sm:h-32 sm:w-24 sm:rounded-[20px] lg:h-[142px] lg:w-[118px] lg:rounded-[22px] lg:border-[3px]">
+              <span className="font-['Phudu'] text-3xl font-bold leading-tight text-[#0D4E22] sm:text-4xl lg:text-[48px]">
+                {timeLeft.hours}
+              </span>
+              <span className="mt-0.5 font-['Fz_Poppins'] text-xs font-semibold text-[#0D4E22] sm:text-sm lg:text-[14px]">
+                Giờ
+              </span>
+            </div>
+
+            <span className="font-['Phudu'] text-xl font-bold text-white sm:text-2xl lg:text-[28px]">:</span>
+
+            {/* Ô Phút */}
+            <div className="flex h-24 w-[68px] flex-col items-center justify-center rounded-[16px] border-[2.5px] border-white bg-gradient-to-b from-[#F7FEE9] to-[#D5F39B] shadow-sm sm:h-32 sm:w-24 sm:rounded-[20px] lg:h-[142px] lg:w-[118px] lg:rounded-[22px] lg:border-[3px]">
+              <span className="font-['Phudu'] text-3xl font-bold leading-tight text-[#0D4E22] sm:text-4xl lg:text-[48px]">
+                {timeLeft.minutes}
+              </span>
+              <span className="mt-0.5 font-['Fz_Poppins'] text-xs font-semibold text-[#0D4E22] sm:text-sm lg:text-[14px]">
+                Phút
+              </span>
+            </div>
+
+            <span className="font-['Phudu'] text-xl font-bold text-white sm:text-2xl lg:text-[28px]">:</span>
+
+            {/* Ô Giây */}
+            <div className="flex h-24 w-[68px] flex-col items-center justify-center rounded-[16px] border-[2.5px] border-white bg-gradient-to-b from-[#F7FEE9] to-[#D5F39B] shadow-sm sm:h-32 sm:w-24 sm:rounded-[20px] lg:h-[142px] lg:w-[118px] lg:rounded-[22px] lg:border-[3px]">
+              <span className="font-['Phudu'] text-3xl font-bold leading-tight text-[#0D4E22] sm:text-4xl lg:text-[48px]">
+                {timeLeft.seconds}
+              </span>
+              <span className="mt-0.5 font-['Fz_Poppins'] text-xs font-semibold text-[#0D4E22] sm:text-sm lg:text-[14px]">
+                Giây
+              </span>
+            </div>
+          </div>
+
+          {/* 3. Dòng thông số cuộc thi */}
+          <p className="mt-3.5 font-['Fz_Poppins'] text-xs font-semibold text-white drop-shadow-sm sm:text-sm lg:text-[15px]">
+            Hạng mục: <span className="font-black">06</span> &nbsp;–&nbsp; Triển lãm:{" "}
+            <span className="font-black">70–100 tác phẩm</span> &nbsp;–&nbsp; Tổng giải thưởng:{" "}
+            <span className="font-black">20</span>
+          </p>
+
+        </div>
+      </section>
 
             {/* Mục đích, ý nghĩa và thông điệp cuộc thi */}
       <section
@@ -661,15 +948,17 @@ function HomePage() {
         Hạng mục dự thi
       </h2>
 
+      {/* Lưới 6 thẻ hạng mục */}
       <div
         className="
           mt-8
           grid
           grid-cols-2
-          gap-4
+          gap-3
           sm:grid-cols-3
+          sm:gap-3.5
           lg:grid-cols-6
-          lg:gap-8
+          lg:gap-3.5
         "
       >
         {categories.map((category) => (
@@ -679,14 +968,19 @@ function HomePage() {
             className="
               group
               relative
-              aspect-[176/192]
+              aspect-[4/5]
               w-full
               overflow-hidden
-              rounded-[10px]
+              rounded-[22px]
               bg-white
               shadow-sm
+              transition-all
+              duration-300
+              hover:-translate-y-1
+              hover:shadow-md
             "
           >
+            {/* Ảnh nền danh mục */}
             <img
               src={category.image}
               alt={category.title.replace("\n", " ")}
@@ -695,39 +989,68 @@ function HomePage() {
                 w-full
                 object-cover
                 transition
-                duration-300
+                duration-500
                 group-hover:scale-105
               "
             />
 
+            {/* Hộp chữ: Tràn khít mép trên và 2 bên, bo tròn cong mép đáy */}
             <div
               className="
                 absolute
-                left-0
+                inset-x-0
                 top-0
                 flex
-                h-16
-                w-full
+                h-[62px]
                 items-center
                 justify-center
-                rounded-lg
-                border-4
+                overflow-hidden
+                rounded-t-[22px]
+                rounded-b-[18px]
+                border-[3px]
                 border-[#268B45]
                 bg-white
                 px-2
+                shadow-sm
+                transition-all
+                duration-300
+                group-hover:border-[#1E6D34]
               "
             >
+              {/* Nền gradient xanh phủ lên khi rê chuột */}
+              <span
+                aria-hidden="true"
+                className="
+                  absolute
+                  inset-0
+                  bg-gradient-to-br
+                  from-[#85C446]
+                  via-[#4DA53E]
+                  to-[#1E6D34]
+                  opacity-0
+                  transition-opacity
+                  duration-300
+                  group-hover:opacity-100
+                "
+              />
+
+              {/* Tên hạng mục: Đổi chữ trắng khi hover */}
               <span
                 className="
+                  relative
+                  z-10
                   whitespace-pre-line
                   text-center
                   font-['Fz_Poppins']
                   text-xs
                   font-bold
                   uppercase
-                  leading-5
-                  text-green-900
-                  lg:text-sm
+                  leading-4
+                  text-[#1A6C35]
+                  transition-colors
+                  duration-300
+                  group-hover:!text-white
+                  lg:text-[13px]
                 "
               >
                 {category.title}
@@ -738,351 +1061,170 @@ function HomePage() {
       </div>
     </div>
 
-    {/* Bài thi nổi bật */}
-    <div className="mt-16">
-      <div
-        className="
-          rounded-2xl
-          bg-gradient-to-b
-          from-[#8EC459]
-          to-[#1F763B]
-          px-5
-          py-7
-          sm:px-8
-        "
-      >
-        <h2
-          className="
-            text-center
-            font-['Phudu']
-            text-3xl
-            font-[800]
-            uppercase
-            leading-tight
-            text-white
-            sm:text-4xl
-          "
+    {/* Khối Tiêu đề + Bộ lọc Bài thi nổi bật */}
+    <div className="mt-16 overflow-hidden rounded-[36px] bg-gradient-to-r from-[#60A54C] via-[#237837] to-[#60A54C] px-6 py-8 text-center shadow-md">
+      <h2 className="font-['Phudu'] text-3xl font-[800] uppercase text-white sm:text-4xl">
+        Bài thi nổi bật
+      </h2>
+
+      {/* Bộ lọc 3 tab chuẩn giao diện */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+        <button
+          type="button"
+          onClick={() => setActiveTab("latest")}
+          className={`rounded-full px-6 py-2 font-['Fz_Poppins'] text-[15px] font-semibold transition ${
+            activeTab === "latest"
+              ? "bg-white text-[#1C753A] shadow-md"
+              : "border border-white/40 text-white hover:bg-white/10"
+          }`}
         >
-          Bài thi nổi bật
-        </h2>
+          Mới nhất
+        </button>
 
-        <div
-          className="
-            mt-5
-            flex
-            flex-wrap
-            items-center
-            justify-center
-            gap-4
-            sm:gap-10
-          "
+        <button
+          type="button"
+          onClick={() => setActiveTab("favorite")}
+          className={`rounded-full px-6 py-2 font-['Fz_Poppins'] text-[15px] font-semibold transition ${
+            activeTab === "favorite"
+              ? "bg-white text-[#1C753A] shadow-md"
+              : "border border-white/40 text-white hover:bg-white/10"
+          }`}
         >
-          <button
-            type="button"
-            className="
-              min-w-[112px]
-              rounded-2xl
-              border
-              border-white
-              bg-gradient-to-b
-              from-[#33904A]
-              to-[#1F763B]
-              px-7
-              py-1.5
-              font-['Fz_Poppins']
-              text-sm
-              font-normal
-              text-white
-              transition
-              hover:brightness-110
-              sm:text-base
-            "
-          >
-            Mới nhất
-          </button>
+          Được yêu thích
+        </button>
 
-          <button
-            type="button"
-            className="
-              min-w-[176px]
-              rounded-2xl
-              border
-              border-white
-              bg-gradient-to-b
-              from-[#33904A]
-              to-[#1F763B]
-              px-8
-              py-1.5
-              font-['Fz_Poppins']
-              text-sm
-              font-normal
-              text-white
-              transition
-              hover:brightness-110
-              sm:text-base
-            "
-          >
-            Được yêu thích
-          </button>
-
-          <button
-            type="button"
-            className="
-              min-w-[176px]
-              rounded-2xl
-              border
-              border-white
-              bg-gradient-to-b
-              from-[#33904A]
-              to-[#1F763B]
-              px-8
-              py-1.5
-              font-['Fz_Poppins']
-              text-sm
-              font-normal
-              text-white
-              transition
-              hover:brightness-110
-              sm:text-base
-            "
-          >
-            Bình chọn nhiều
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab("most_voted")}
+          className={`rounded-full px-6 py-2 font-['Fz_Poppins'] text-[15px] font-semibold transition ${
+            activeTab === "most_voted"
+              ? "bg-white text-[#1C753A] shadow-md"
+              : "border border-white/40 text-white hover:bg-white/10"
+          }`}
+        >
+          Bình chọn nhiều
+        </button>
       </div>
+    </div>
 
-      {/* Danh sách bài thi */}
-      <div
-      className="
-        mt-8
-        grid
-        grid-cols-1
-        gap-6
-        sm:grid-cols-2
-        lg:grid-cols-4
-      "
-    >
-        {featuredPosts.map((post) => (
-          <article
-          key={post.id}
-          className="
-            flex
-            h-full
-            min-w-0
-            flex-col
-            overflow-hidden
-            rounded-[20px]
-            border
-            border-black/5
-            bg-white
-            p-4
-            shadow-[0_2px_8px_rgba(0,0,0,0.12)]
-            transition
-            duration-200
-            hover:-translate-y-1
-            hover:shadow-lg
-          "
-        >
-          {/* Ảnh bài thi */}
-          <img
-            src={post.image}
-            alt={post.title}
-            className="
-              aspect-[16/9]
-              w-full
-              rounded-[16px]
-              object-cover
-            "
-          />
+    {/* Xử lý hiển thị: Nếu tab 'Được yêu thích' chưa có bài thì báo rỗng, ngược lại vẽ lưới bài thi */}
+    {activeTab === "favorite" && displayedPosts.length === 0 ? (
+      <div className="mt-10 rounded-[24px] border border-dashed border-[#8DC359] bg-white/70 py-12 text-center shadow-sm">
+        <p className="font-['Fz_Poppins'] text-base font-semibold text-[#1C753A]">
+          Bạn chưa bình chọn cho tác phẩm nào
+        </p>
+        <p className="mt-1.5 font-['Fz_Poppins'] text-xs text-neutral-500">
+          Hãy bấm "Bình Chọn" ở các tác phẩm bạn ấn tượng để lưu vào danh sách này nhé!
+        </p>
+      </div>
+    ) : (
+      <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {displayedPosts.map((post) => {
+          const isVoted = votedPostIds.has(post.id)
+          const isVoting = votingId === post.id
 
-          <div className="flex flex-1 flex-col px-2 pb-1 pt-4">
-            {/* Tên bài thi */}
-            <h3
-              className="
-                font-['Fz_Poppins']
-                text-[18px]
-                font-bold
-                leading-[1.35]
-                text-black
-              "
+          return (
+            <article
+              key={post.id}
+              className="group overflow-hidden rounded-[20px] bg-white p-3.5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >
-              {post.title}
-            </h3>
+              {/* Khung ảnh chữ nhật ngang 16:10 */}
+              <div className="aspect-[16/10] w-full overflow-hidden rounded-[14px]">
+                <img
+                  src={post.image || featuredImage}
+                  alt={post.title}
+                  className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                />
+              </div>
 
-            {/* Tên tác giả */}
-            <p
-              className="
-                mt-1
-                font-['Fz_Poppins']
-                text-[15px]
-                font-normal
-                leading-6
-                text-black
-              "
-            >
-              {post.author}
-            </p>
-
-            {/* Đẩy hai hàng dưới xuống cuối card */}
-            <div className="mt-auto pt-1">
-              {/* Mã số và địa điểm */}
-              <div
-                className="
-                  grid
-                  grid-cols-[minmax(0,1fr)_auto]
-                  items-center
-                  gap-3
-                "
-              >
-                <p
-                  className="
-                    truncate
-                    font-['Fz_Poppins']
-                    text-[14px]
-                    font-normal
-                    text-black
-                  "
-                >
-                  Mã số: {post.code}
+              {/* Thông tin bài thi */}
+              <div className="mt-3.5 px-0.5">
+                <h3 className="font-['Fz_Poppins'] text-[15px] font-bold leading-tight text-black line-clamp-1">
+                  {post.title}
+                </h3>
+                <p className="mt-1 font-['Fz_Poppins'] text-[13px] font-normal text-neutral-800 line-clamp-1">
+                  {post.author}
                 </p>
-
-                <div className="flex items-center gap-2">
-                  <img
-                    src={addressIcon}
-                    alt=""
-                    aria-hidden="true"
-                    className="h-5 w-5 shrink-0 object-contain"
-                  />
-
-                  <span
-                    className="
-                      whitespace-nowrap
-                      font-['Fz_Poppins']
-                      text-[14px]
-                      font-normal
-                      text-black
-                    "
-                  >
+                <div className="mt-2.5 flex items-center justify-between font-['Fz_Poppins'] text-xs text-neutral-800">
+                  <span>Mã số: {post.code || String(post.id).padStart(5, "0")}</span>
+                  <span className="inline-flex items-center gap-1.5 font-medium text-neutral-800">
+                    <img src={addressIcon} alt="" className="h-3.5 w-3.5 object-contain" />
                     {post.location}
                   </span>
                 </div>
               </div>
 
-              {/* Lượt thích, chia sẻ và bình chọn */}
-              <div
-                className="
-                  mt-3
-                  flex
-                  items-center
-                  justify-between
-                  gap-10
-                "
-              >
-                {/* Lượt thích */}
-                <div className="flex shrink-0 items-center gap-3">
+              {/* Đường kẻ ngang */}
+              <div className="mt-3 border-t border-neutral-100" />
+
+              {/* Hàng tương tác */}
+              <div className="mt-3 flex items-center justify-between px-0.5">
+                <div className="flex items-center gap-1.5">
                   <img
                     src={loveIcon}
                     alt=""
-                    aria-hidden="true"
-                    className="h-7 w-7 shrink-0 object-contain"
+                    className="h-5 w-5 object-contain"
                   />
-
-                  <span
-                    className="
-                      font-['Fz_Poppins']
-                      text-[16px]
-                      font-semibold
-                      text-black
-                    "
-                  >
+                  <span className="font-['Fz_Poppins'] text-xs font-bold text-black">
                     {post.votes}
                   </span>
                 </div>
 
-                {/* Icon share và nút bình chọn */}
-                <div className="flex shrink-0 items-center gap-3">
-                  {/* Share */}
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    aria-label={`Chia sẻ bài thi ${post.title}`}
-                    className="
-                      flex
-                      h-8
-                      w-8
-                      shrink-0
-                      items-center
-                      justify-center
-                      border-0
-                      bg-transparent
-                      p-0
-                      transition
-                      hover:scale-105
-                    "
+                    onClick={() => setSharingPost(post)}
+                    className="flex items-center justify-center transition hover:scale-105 hover:opacity-85"
+                    title="Chia sẻ"
                   >
                     <img
                       src={shareIcon}
-                      alt=""
-                      aria-hidden="true"
-                      className="h-10 w-10 object-contain"
+                      alt="Chia sẻ"
+                      className="h-7 w-7 object-contain"
                     />
                   </button>
 
-                  {/* Bình chọn */}
                   <button
                     type="button"
-                    className="
-                      flex
-                      h-8
-                      min-w-[100px]
-                      items-center
-                      justify-center
-                      rounded-full
-                      bg-gradient-to-b
-                      from-[#8DC359]
-                      to-[#1C753A]
-                      px-4
-                      font-['Fz_Poppins']
-                      text-[14px]
-                      font-semibold
-                      text-white
-                      shadow-sm
-                      transition
-                      hover:brightness-110
-                    "
+                    onClick={() => handleVote(post)}
+                    disabled={isVoted || isVoting}
+                    className={`rounded-full px-4 py-1.5 font-['Fz_Poppins'] text-xs font-semibold tracking-wide transition ${
+                      isVoted
+                        ? "bg-neutral-300 text-neutral-600 cursor-not-allowed"
+                        : "bg-[#4FA83D] text-white hover:bg-[#439533]"
+                    }`}
                   >
-                    Bình chọn
+                    {isVoting ? "Đang vote..." : isVoted ? "Đã vote" : "Bình Chọn"}
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
-        </article>
-        ))}
+            </article>
+          )
+        })}
       </div>
+    )}
 
-      {/* Nút xem thêm */}
-      <div className="mt-8 flex justify-center">
-        <button
-          type="button"
-          className="
-            min-w-[144px]
-            rounded-[29px]
-            border
-            border-[#8DC359]
-            bg-lime-50
-            px-10
-            py-2
-            font-['Fz_Poppins']
-            text-sm
-            font-medium
-            text-green-800
-            transition
-            hover:bg-white
-          "
-        >
+    {/* Nút Xem thêm */}
+    <div className="mt-10 flex justify-center">
+      <Link
+        to="/danh-sach-bai-thi"
+        className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-full border border-[#4FA83D] px-8 py-2 font-['Fz_Poppins'] text-sm font-semibold shadow-sm transition-all duration-300 hover:border-transparent hover:shadow-md active:scale-95"
+      >
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-r from-[#207234] via-[#388D3B] to-[#7DBE43] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        />
+
+        <img
+          src={xemThemIcon}
+          alt=""
+          className="relative z-10 h-3.5 w-3.5 object-contain transition-transform duration-300 group-hover:scale-110"
+        />
+
+        <span className="relative z-10 text-[#1C753A] transition-colors duration-300 group-hover:!text-white">
           Xem thêm
-        </button>
-      </div>
+        </span>
+      </Link>
     </div>
 
     {/* Thể lệ cuộc thi */}
@@ -1970,8 +2112,16 @@ function HomePage() {
 </div>
 
 
+{/* Modal chia sẻ */}
+      <ShareModal
+        post={sharingPost}
+        isOpen={Boolean(sharingPost)}
+        onClose={() => setSharingPost(null)}
+      />
     </>
   )
 }
+
+
 
 export default HomePage
